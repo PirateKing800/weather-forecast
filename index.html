@@ -4,17 +4,213 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Task Tracker Dashboard</title>
-    <link rel="stylesheet" href="style.css" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            margin-bottom: 10px;
+        }
+        #filters {
+            margin-bottom: 20px;
+        }
+        #filters label {
+            margin-right: 15px;
+        }
+        #search-box {
+            padding: 5px;
+            margin-left: 10px;
+        }
+        #task-stats {
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        #task-stats span {
+            margin-right: 20px;
+            font-weight: bold;
+        }
+        #task-list {
+            list-style: none;
+            padding: 0;
+        }
+        #task-list li {
+            padding: 8px;
+            border-bottom: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .task-title {
+            flex: 1;
+            margin-left: 10px;
+        }
+        /* Optional styling for completed tasks */
+        .completed {
+            text-decoration: line-through;
+            color: gray;
+        }
+        /* Styles for captcha container, if needed */
+        #captcha-container {
+            margin-top: 40px;
+        }
+        #spinner {
+            display: none;
+        }
+    </style>
 </head>
 <body>
     <h1>Task Tracker Dashboard</h1>
+    
+    <!-- Filters Section -->
+    <div id="filters">
+        <label for="status-filter">Filter by status:</label>
+        <select id="status-filter">
+            <option value="all">All</option>
+            <option value="pending">Pending</option>
+            <option value="completed">Completed</option>
+        </select>
+        <label for="search-box">Search by title:</label>
+        <input type="text" id="search-box" placeholder="Search tasks..." />
+    </div>
+    
+    <!-- Task Counters -->
+    <div id="task-stats">
+        <span id="total-tasks">Total: 0</span>
+        <span id="completed-tasks">Completed: 0</span>
+        <span id="pending-tasks">Pending: 0</span>
+    </div>
+    
+    <!-- Task List -->
     <ul id="task-list"></ul>
+    
+    <!-- Captcha Solver Section -->
     <h2>Captcha Solver</h2>
     <div id="captcha-container">
         <img id="captcha-img" src="" alt="Captcha Image" />
         <div id="spinner">Loading...</div>
         <p>Solved Text: <span id="solved-text"></span></p>
     </div>
-    <script src="script.js"></script>
+    
+    <script>
+        // Sample initial tasks
+        const initialTasks = [
+            { id: 1, title: "Buy groceries", status: "pending" },
+            { id: 2, title: "Finish report", status: "completed" },
+            { id: 3, title: "Call Alice", status: "pending" },
+            { id: 4, title: "Book flight tickets", status: "pending" },
+            { id: 5, title: "Read a book", status: "completed" }
+        ];
+
+        let tasks = [];
+        const taskListEl = document.getElementById('task-list');
+        const totalTasksEl = document.getElementById('total-tasks');
+        const completedTasksEl = document.getElementById('completed-tasks');
+        const pendingTasksEl = document.getElementById('pending-tasks');
+        const statusFilterEl = document.getElementById('status-filter');
+        const searchBoxEl = document.getElementById('search-box');
+
+        // Load tasks from localStorage or initialize
+        function loadTasks() {
+            const stored = localStorage.getItem('tasks');
+            if (stored) {
+                try {
+                    tasks = JSON.parse(stored);
+                } catch (e) {
+                    tasks = [...initialTasks];
+                }
+            } else {
+                tasks = [...initialTasks];
+            }
+        }
+
+        // Save tasks to localStorage
+        function saveTasks() {
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        }
+
+        // Update counters
+        function updateCounters() {
+            const total = tasks.length;
+            const completed = tasks.filter(t => t.status === 'completed').length;
+            const pending = total - completed;
+            totalTasksEl.textContent = `Total: ${total}`;
+            completedTasksEl.textContent = `Completed: ${completed}`;
+            pendingTasksEl.textContent = `Pending: ${pending}`;
+        }
+
+        // Render tasks based on filters
+        function renderTasks() {
+            const filterStatus = statusFilterEl.value;
+            const searchQuery = searchBoxEl.value.toLowerCase();
+
+            // Clear existing list
+            taskListEl.innerHTML = '';
+
+            // Filter tasks
+            const filteredTasks = tasks.filter(task => {
+                const matchesStatus = filterStatus === 'all' || task.status === filterStatus;
+                const matchesSearch = task.title.toLowerCase().includes(searchQuery);
+                return matchesStatus && matchesSearch;
+            });
+
+            // Render each task
+            filteredTasks.forEach(task => {
+                const li = document.createElement('li');
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = task.status === 'completed';
+                checkbox.dataset.id = task.id;
+
+                // Add event listener for checkbox
+                checkbox.addEventListener('change', () => {
+                    toggleTaskStatus(task.id, checkbox.checked);
+                });
+
+                const span = document.createElement('span');
+                span.className = 'task-title';
+                span.textContent = task.title;
+                if (task.status === 'completed') {
+                    span.classList.add('completed');
+                }
+
+                li.appendChild(checkbox);
+                li.appendChild(span);
+
+                taskListEl.appendChild(li);
+            });
+        }
+
+        // Toggle task status
+        function toggleTaskStatus(id, isCompleted) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.status = isCompleted ? 'completed' : 'pending';
+                saveTasks();
+                updateCounters();
+                renderTasks();
+            }
+        }
+
+        // Initialize dashboard
+        function init() {
+            loadTasks();
+            updateCounters();
+            renderTasks();
+
+            // Event listeners for filters
+            statusFilterEl.addEventListener('change', () => {
+                renderTasks();
+            });
+
+            searchBoxEl.addEventListener('input', () => {
+                renderTasks();
+            });
+        }
+
+        // Run init on page load
+        window.addEventListener('load', init);
+    </script>
 </body>
 </html>
